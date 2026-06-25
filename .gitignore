@@ -1,0 +1,23 @@
+# ========= Unity 忽略文件 =========
+
+# Library / 缓存（最大，几 GB）
+MistTown/Library/
+MistTown/Build/
+MistTown/Temp/
+MistTown/Logs/
+MistTown/MemoryCaptures/
+MistTown/obj/
+
+# 自动生成的 VS 文件
+MistTown/*.csproj
+MistTown/*.sln
+MistTown/.vs/
+
+# VS Code
+.vscode/
+
+# 日志
+create_project.log
+
+# macOS
+.DS_Store
