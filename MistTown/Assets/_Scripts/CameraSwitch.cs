@@ -14,12 +14,29 @@ public class CameraSwitch : MonoBehaviour
 
     void Start()
     {
-        // 获取场景中的主摄像机
-        camTransform = Camera.main.transform;
+        // 尝试用 Camera.main 找主摄像机
+        if (Camera.main != null)
+        {
+            camTransform = Camera.main.transform;
+        }
+        else
+        {
+            // 找不到就用场景里的第一个摄像机
+            camTransform = FindObjectOfType<Camera>().transform;
+        }
+
+        // 修复：把摄像机标签设为 MainCamera，下次 Camera.main 就能找到了
+        if (camTransform != null)
+        {
+            camTransform.gameObject.tag = "MainCamera";
+        }
     }
 
     void Update()
     {
+        // 如果摄像机没找到，跳过这一帧
+        if (camTransform == null) return;
+
         // 按 V 键切换人称
         if (Input.GetKeyDown(KeyCode.V))
         {
