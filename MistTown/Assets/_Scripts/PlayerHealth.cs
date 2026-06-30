@@ -15,6 +15,8 @@ public class PlayerHealth : MonoBehaviour
     public void TakeDamage(float amount)
     {
         currentHealth -= amount;
+        // 限制最低为 0，防止负数
+        if (currentHealth < 0) currentHealth = 0;
         Debug.Log("受到 " + amount + " 点伤害，剩余血量: " + currentHealth);
 
         if (currentHealth <= 0)
@@ -34,7 +36,16 @@ public class PlayerHealth : MonoBehaviour
     void Die()
     {
         Debug.Log("玩家死亡！");
-        // 暂时禁用玩家移动
+
+        // 禁用移动脚本
         GetComponent<PlayerMovement>().enabled = false;
+
+        // 冻结刚体，让玩家彻底停住
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.velocity = Vector3.zero;
+            rb.constraints = RigidbodyConstraints.FreezeAll;
+        }
     }
 }
