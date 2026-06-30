@@ -1,60 +1,111 @@
 using UnityEngine;
 
-// Shoot: 鼠标左键发射子弹 + 弹药管理 + R 键换弹
+// Shoot: 左键射击 + 弹药管理 + R 键换弹 + 武器切换 + 自动/散射
 public class Shoot : MonoBehaviour
 {
-    public GameObject bulletPrefab; // 子弹预制体
-    public float shootForce = 20f;  // 子弹速度
+    public Weapon[] weapons;
+    public GameObject bulletPrefab;
 
-    public int maxAmmo = 12;        // 弹夹容量
-    public float reloadTime = 1.5f; // 换弹时间（秒）
-
-    public int currentAmmo { get; private set; } // 当前弹夹子弹数（UI 可读）
-    public bool isReloading { get; private set; } // 是否正在换弹（UI 可读）
+    private int currentIndex = 0;
+    private int[] ammoPerWeapon;
+    private float lastFireTime;            // 上次射击时间（用于控制射速）
+    public int currentAmmo { get; private set; }
+    public int maxAmmo { get; private set; }
+    public string weaponName { get; private set; }
+    public bool isReloading { get; private set; }
 
     void Start()
     {
-        currentAmmo = maxAmmo;
+        if (weapons == null || weapons.Length == 0) return;
+
+        ammoPerWeapon = new int[weapons.Length];
+        for (int i = 0; i < weapons.Length; i++)
+            ammoPerWeapon[i] = weapons[i].maxAmmo;
+
+        SwitchWeapon(0);
     }
 
     void Update()
     {
-        // 按 R 开始换弹
+        // 数字键切换武器
+        for (int i = 0; i < weapons.Length; i++)
+        {
+            if (Input.GetKeyDown(KeyCode.Alpha1 + i))
+            {
+                SwitchWeapon(i);
+                return;
+            }
+        }
+
+        if (weapons.Length == 0) return;
+        Weapon w = weapons[currentIndex];
+
+        // 换弹
         if (Input.GetKeyDown(KeyCode.R) && !isReloading && currentAmmo < maxAmmo)
         {
-            StartCoroutine(Reload());
+            StartCoroutine(Reload(w.reloadTime));
             return;
         }
 
-        // 换弹中不能开枪
         if (isReloading) return;
 
-        // 左键射击
-        if (Input.GetMouseButtonDown(0))
+        // 是否按下射击键
+        bool firePressed = w.isAutomatic ? Input.GetMouseButton(0) : Input.GetMouseButtonDown(0);
+        if (!firePressed) return;
+
+        // 射速控制
+        if (Time.time - lastFireTime < w.fireRate) return;
+
+        // 没子弹了
+        if (currentAmmo <= 0)
         {
-            if (currentAmmo <= 0)
+            StartCoroutine(Reload(w.reloadTime));
+            return;
+        }
+
+        // 开火！
+        currentAmmo--;
+        ammoPerWeapon[currentIndex] = currentAmmo;
+        lastFireTime = Time.time;
+
+        for (int i = 0; i < w.bulletsPerShot; i++)
+        {
+            // 计算子弹方向（带散射）
+            Vector3 direction = transform.forward;
+            if (w.spreadAngle > 0)
             {
-                // 没子弹了自动换弹
-                StartCoroutine(Reload());
-                return;
+                float spreadRad = w.spreadAngle * Mathf.Deg2Rad;
+                direction = transform.forward + Random.insideUnitSphere * spreadRad;
+                direction.Normalize();
             }
 
-            // 扣子弹
-            currentAmmo--;
-
-            // 生成子弹
             Vector3 spawnPos = transform.position + transform.forward * 1f;
-            GameObject bullet = Instantiate(bulletPrefab, spawnPos, transform.rotation);
-            bullet.GetComponent<Rigidbody>().AddForce(transform.forward * shootForce, ForceMode.Impulse);
+            GameObject bullet = Instantiate(bulletPrefab, spawnPos, Quaternion.LookRotation(direction));
+            bullet.GetComponent<Rigidbody>().AddForce(direction * w.shootForce, ForceMode.Impulse);
+
+            // 传给子弹伤害值
+            Bullet bulletScript = bullet.GetComponent<Bullet>();
+            if (bulletScript != null) bulletScript.damageAmount = w.damage;
         }
     }
 
-    // 换弹协程
-    System.Collections.IEnumerator Reload()
+    void SwitchWeapon(int index)
+    {
+        if (index < 0 || index >= weapons.Length) return;
+        if (index == currentIndex) return;
+
+        currentIndex = index;
+        currentAmmo = ammoPerWeapon[index];
+        maxAmmo = weapons[index].maxAmmo;
+        weaponName = weapons[index].weaponName;
+    }
+
+    System.Collections.IEnumerator Reload(float time)
     {
         isReloading = true;
-        yield return new WaitForSeconds(reloadTime);
-        currentAmmo = maxAmmo;
+        yield return new WaitForSeconds(time);
+        ammoPerWeapon[currentIndex] = weapons[currentIndex].maxAmmo;
+        currentAmmo = ammoPerWeapon[currentIndex];
         isReloading = false;
     }
 }
