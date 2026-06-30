@@ -15,7 +15,18 @@ public class HealthPickup : Interactable
     // 重写父类的 Interact 方法，实现具体的血包行为
     public override void Interact()
     {
-        Debug.Log("回血 " + healAmount + " 点！");
+        // 找到玩家并回血
+        GameObject player = GameObject.Find("Player");
+        if (player != null)
+        {
+            PlayerHealth health = player.GetComponent<PlayerHealth>();
+            if (health != null)
+            {
+                health.Heal(healAmount);
+                Debug.Log("回血 " + healAmount + " 点！");
+            }
+        }
+
         Destroy(gameObject); // 拾取后销毁
     }
 }
